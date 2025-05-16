@@ -1,0 +1,15 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    env_file:
+      - .env
+    container_name: ${RABBIT_MQ_CONTAINER_NAME}
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_VHOST: ${RABBIT_MQ_VHOST}
+      RABBITMQ_DEFAULT_USER: ${RABBIT_MQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_MQ_PASSWORD}
+    volumes:
+      - ./.env-rabbitmq.enabled_plugins:/etc/rabbitmq/enabled_plugins

@@ -41,5 +41,5 @@ out/
 .java-version
 
 ### enviromnent file ###
-.env
+infra/.env
 infra/.env
