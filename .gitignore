@@ -43,3 +43,4 @@ out/
 ### enviromnent file ###
 infra/.env
 infra/.env
+.env

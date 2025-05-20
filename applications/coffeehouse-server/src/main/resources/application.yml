@@ -1,3 +1,14 @@
 spring:
   application:
   name: coffeehouse-server
+  config:
+    import: optional:file:.env[.properties] # config env file add
+
+coffeehouse:
+  order:
+    submit-order-sheet-uri: ${ORDER_SERVICE_SUBMIT_ORDER_SHEET_URI:http://localhost:8080/order-sheet}
+    search-order-uri: ${ORDER_SERVICE_SEARCH_ORDER_URI:http://localhost:8080/order}
+  brew:
+    notify-brew-complete-uri: ${BREW_NOTIFY_BREW_COMPLETE_URI:http://localhost:8080/order/brew-completed}
+  user:
+    notify-brew-complete-uri: ${USER_NOTIFY_BREW_COMPLETE_URI:http://localhost:8080/user/brew-completed}
