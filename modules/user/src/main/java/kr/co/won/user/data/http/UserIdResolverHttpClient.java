@@ -22,8 +22,8 @@ public class UserIdResolverHttpClient implements UserIdResolver {
 
     public UserIdResolverHttpClient(RestTemplate restTemplate, Environment environment) {
         this.restTemplate = Objects.requireNonNull(restTemplate, "RestTemplate must not be null");
-        this.findOrderInfoUri = environment.getProperty("coffeehouse.search-order.uri", URI.class);
-        logger.info("findOrderInfoUri: {}", findOrderInfoUri.toString());
+        this.findOrderInfoUri = environment.getProperty("coffeehouse.order.search-order-uri", URI.class);
+        logger.info("findOrderInfoUri: {}", findOrderInfoUri);
     }
 
     @Override

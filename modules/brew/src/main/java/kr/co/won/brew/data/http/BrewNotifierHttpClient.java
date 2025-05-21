@@ -5,7 +5,6 @@ import kr.co.won.brew.domain.OrderId;
 import kr.co.won.brew.domain.service.BrewNotifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.http.RequestEntity;
 import org.springframework.stereotype.Component;
@@ -13,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.util.Objects;
+
 
 @Component
 public class BrewNotifierHttpClient implements BrewNotifier {

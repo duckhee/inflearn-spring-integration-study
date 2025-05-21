@@ -8,6 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessagingException;
 
@@ -15,6 +16,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Observable;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -26,23 +28,34 @@ public @interface EnableBrewModule {
     class BrewModuleConfiguration {
 
         /**
-         * Message Channel 에서 전달 받은 메시지에 대한 처리를 하는
+         * Message Channel 에서 전달 받은 메시지에 대한 처리를 하는 Bean 설정
+         *
          * @param orderSheetSubmission
+         * @param barCounterChannel
          * @return
          */
         @Bean
-        public MessageHandler messageHandler(OrderSheetSubmission orderSheetSubmission) {
+        public MessageHandler messageHandler(OrderSheetSubmission orderSheetSubmission, MessageChannel barCounterChannel) {
             var handler = new MessageHandler() {
 
                 @Override
                 public void handleMessage(Message<?> message) throws MessagingException {
                     var command = (BrewRequestCommand) message.getPayload();
-                    var  brewOrderId = new OrderId(command.orderId().value());
+                    var brewOrderId = new OrderId(command.orderId().value());
                     orderSheetSubmission.submit(new OrderSheetSubmission.OrderSheetForm(brewOrderId));
                 }
             };
-            return handler;
 
+            /** 관찰자로 등록을 하기 위한 객체 형변환 */
+            var observer = (Observable) barCounterChannel;
+            observer.addObserver((o, arg) -> {
+                var message = (Message<?>) arg;
+                handler.handleMessage(message);
+            });
+
+            return handler;
         }
+
+
     }
 }

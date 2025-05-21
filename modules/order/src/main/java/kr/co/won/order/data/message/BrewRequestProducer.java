@@ -4,6 +4,7 @@ package kr.co.won.order.data.message;
 import kr.co.won.order.domain.OrderId;
 import kr.co.won.order.domain.message.BrewRequestCommand;
 import kr.co.won.order.domain.service.BarCounter;
+import org.springframework.context.annotation.Primary;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 /**
  * 제조 요청에 대한 메시지 처리 컴포넌트
  */
+@Primary
 @Component
 public class BrewRequestProducer implements BarCounter {
 

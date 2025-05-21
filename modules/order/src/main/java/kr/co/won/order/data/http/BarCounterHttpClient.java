@@ -14,7 +14,6 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URI;
 import java.util.Objects;
 
-@Primary
 @Component
 class BarCounterHttpClient implements BarCounter {
 
