@@ -28,7 +28,9 @@ dependencies {
     implementation(project(':modules:user'))
 
     /// spring message 추가
-    testImplementation('org.springframework:spring-messaging')
+//    testImplementation('org.springframework:spring-messaging')
+    /// spring integration으로 변경하기 위한 의존성 추가
+    testImplementation('org.springframework.integration:spring-integration-core')
 
     testImplementation('org.springframework.boot:spring-boot-starter-test')
     testImplementation('org.springframework.boot:spring-boot-starter-web')

@@ -27,7 +27,9 @@ dependencies {
     implementation('org.springframework:spring-webmvc')
 
     /// spring messaging에 대한 의존성 추가
-    implementation('org.springframework:spring-messaging')
+//    implementation('org.springframework:spring-messaging')
+    /// spring integration으로 변경하기 위한 의존성 추가
+    implementation('org.springframework.integration:spring-integration-core')
 
     testImplementation('org.springframework:spring-test')
     testImplementation('org.junit.jupiter:junit-jupiter')

@@ -5,7 +5,6 @@ import kr.co.won.brew.domain.OrderSheetId;
 import kr.co.won.brew.domain.entity.OrderSheet;
 import kr.co.won.brew.domain.entity.OrderSheetRepository;
 import kr.co.won.brew.domain.entity.OrderSheetStatus;
-import kr.co.won.coffeehose.libraries.message.ObservableChannel;
 import kr.co.won.order.EnableOrderModule;
 import kr.co.won.order.domain.OrderId;
 import kr.co.won.order.domain.UserAccountId;
@@ -20,6 +19,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.integration.channel.DirectChannel;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.web.client.RestTemplate;
 
@@ -56,7 +56,10 @@ public class CoffeehouseIntegrationTestingApplication {
      */
     @Bean
     MessageChannel barCounterChannel() {
-        return new ObservableChannel();
+        /// 사용자가 생성한 채널
+//        return new ObservableChannel();
+        ///  Spring-integration의 기능을 이용한 채널
+        return new DirectChannel();
     }
 
 
