@@ -3,7 +3,11 @@ spring:
   name: coffeehouse-server
   config:
     import: optional:file:.env[.properties] # config env file add
-
+  # amqp에 대한 설정
+  rabbitmq:
+    addresses: ${AMQP_ADDRESS:amqp://localhost:5672}
+    username: ${RABBITMQ_USER_NAME:coffeehouse}
+    password: ${RABBITMQ_USER_PASSWORD:password}
 coffeehouse:
   order:
     submit-order-sheet-uri: ${ORDER_SERVICE_SUBMIT_ORDER_SHEET_URI:http://localhost:8080/order-sheet}

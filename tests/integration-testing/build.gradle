@@ -31,7 +31,8 @@ dependencies {
 //    testImplementation('org.springframework:spring-messaging')
     /// spring integration으로 변경하기 위한 의존성 추가
     testImplementation('org.springframework.integration:spring-integration-core')
-
+    /// AMQP Test를 위한 의존성 추가
+    testImplementation('org.springframework.integration:spring-integration-amqp')
     testImplementation('org.springframework.boot:spring-boot-starter-test')
     testImplementation('org.springframework.boot:spring-boot-starter-web')
     testImplementation('org.awaitility:awaitility')

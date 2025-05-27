@@ -65,13 +65,32 @@ public @interface EnableBrewModule {
          * @param barCounterChannel
          * @return
          */
+//        @Bean
+//        public IntegrationFlow requestBrewIntegrationFlow(OrderSheetSubmission orderSheetSubmission, MessageChannel barCounterChannel) {
+//            return IntegrationFlow.from(barCounterChannel)
+//                    .handle(message -> {
+//                        var command = (BrewRequestCommand) message.getPayload();
+//                        var brewOrderId = new OrderId(command.orderId().value());
+//                        orderSheetSubmission.submit(new OrderSheetSubmission.OrderSheetForm(brewOrderId));
+//                    }).get();
+//        }
+
+        /**
+         * Spring-Integration을 이용한 Message Channel에 대한 처리를 하는 Bean 정의
+         * => AMQP를 이용한 메시지 처리
+         *
+         * @param orderSheetSubmission
+         * @param brewRequestChannel
+         * @return
+         */
         @Bean
-        public IntegrationFlow requestBrewIntegrationFlow(OrderSheetSubmission orderSheetSubmission, MessageChannel barCounterChannel) {
-            return IntegrationFlow.from(barCounterChannel)
-                    .handle(message -> {
-                        var command = (BrewRequestCommand) message.getPayload();
+        public IntegrationFlow requestBrewIntegrationFlow(OrderSheetSubmission orderSheetSubmission, MessageChannel brewRequestChannel) {
+            return IntegrationFlow.from(brewRequestChannel)
+                    .handle(BrewRequestCommand.class, (payload, headers) -> {
+                        var command = payload;
                         var brewOrderId = new OrderId(command.orderId().value());
                         orderSheetSubmission.submit(new OrderSheetSubmission.OrderSheetForm(brewOrderId));
+                        return null; // 해당 값은 다음 목적지에 대한 값이 들어가야 한다.
                     }).get();
         }
 
@@ -109,7 +128,7 @@ public @interface EnableBrewModule {
          */
         @Bean
         public MessageChannel brewCompletedNotifyUserChannel() {
-            
+
             return new DirectChannel();
         }
 

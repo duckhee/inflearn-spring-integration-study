@@ -1,5 +1,6 @@
 package kr.co.won.tests.integration;
 
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import kr.co.won.brew.EnableBrewModule;
 import kr.co.won.brew.domain.OrderSheetId;
 import kr.co.won.brew.domain.entity.OrderSheet;
@@ -14,12 +15,19 @@ import kr.co.won.order.domain.entity.OrderStatus;
 import kr.co.won.user.EnableUserModule;
 import kr.co.won.user.domain.entity.UserAccount;
 import kr.co.won.user.domain.entity.UserAccountRepository;
+import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.connection.SimpleRoutingConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.integration.amqp.dsl.Amqp;
 import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.web.client.RestTemplate;
 
@@ -49,6 +57,62 @@ public class CoffeehouseIntegrationTestingApplication {
             orderRepository.save(new Order(new OrderId(acceptedOrderIdValue), new UserAccountId(userAccountIdValue), OrderStatus.ACCEPTED));
             orderSheetRepository.save(new OrderSheet(new OrderSheetId(confirmedOrderSheetIdValue), new kr.co.won.brew.domain.OrderId(acceptedOrderIdValue), OrderSheetStatus.CONFIRMED));
         };
+    }
+
+    /**
+     * AMQP에 대한 사용하기 위한 RabbitMQ에대한 Queue 생성
+     *
+     * @param connectionFactory
+     * @return
+     */
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
+        rabbitAdmin.declareQueue(new Queue("brew")); // routingKey에 대한 발행 값들을 담아주기 위한 Queue
+        return rabbitAdmin;
+    }
+
+    /**
+     * AMQP에서 사용할 Json 값을 변환하기 위한 Bean 등록
+     *
+     * @return
+     */
+    @Bean
+    public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+
+    @Bean
+    public IntegrationFlow amqpInboundIntegrationFlow(ConnectionFactory connectionFactory, MessageChannel brewRequestChannel) {
+        return IntegrationFlow.from(
+                        Amqp.inboundAdapter(connectionFactory, "brew") // connectionFactory와 처리를 할 routingKey에 대한 값 지정
+                )
+                .handle(message -> {
+                    brewRequestChannel.send(message); // inboundChannel에 메시지 전달한다.
+                }) // 처리할 flow에 대한 정의
+                .get();
+    }
+
+    @Bean
+    public MessageChannel brewRequestChannel() {
+        return new DirectChannel();
+    }
+
+    /**
+     * AMQP를 이용한 메시지 전송을 위한 흐름에 대해서 정의하는 Bean 등록
+     *
+     * @param amqpTemplate
+     * @param barCounterChannel
+     * @return
+     */
+    @Bean
+    public IntegrationFlow amqpOutboundIntegrationFlow(AmqpTemplate amqpTemplate, MessageChannel barCounterChannel) {
+        return IntegrationFlow.from(barCounterChannel)
+                .handle(
+                        Amqp.outboundAdapter(amqpTemplate) // 전달할 Adapter에 대한 설정
+                                .routingKey("brew") // 어디로 보낼줄지에 대한 값 설정
+                )
+                .get();
     }
 
     /**
