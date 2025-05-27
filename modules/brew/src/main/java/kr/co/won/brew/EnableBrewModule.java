@@ -7,17 +7,18 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
+import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.dsl.IntegrationFlow;
-import org.springframework.messaging.Message;
+import org.springframework.integration.http.dsl.Http;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.MessagingException;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Observable;
+import java.net.URI;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -74,5 +75,57 @@ public @interface EnableBrewModule {
                     }).get();
         }
 
+        /**
+         * BrewCompletedNotifyOrderChannel을 이름을 가지는 메시지 채널
+         * -> 해당 기능은 BrewCompletedEvent를 받아서 연결을 해주기 위한 채널이다.
+         *
+         * @return
+         */
+        @Bean
+        public MessageChannel brewCompletedNotifyOrderChannel() {
+            return new DirectChannel();
+        }
+
+        /**
+         * Order Service에 제조 완료를 알려주기 위한 흐름 설정
+         *
+         * @param environment
+         * @param brewCompletedNotifyOrderChannel
+         * @return
+         */
+        @Bean
+        public IntegrationFlow notifyOrderIntegrationFlow(Environment environment, MessageChannel brewCompletedNotifyOrderChannel) {
+            var orderUri = environment.getRequiredProperty("coffeehouse.brew.notify-brew-complete-uri", URI.class);
+            return IntegrationFlow.from(brewCompletedNotifyOrderChannel)
+                    .handle(Http.outboundChannelAdapter(orderUri).httpMethod(HttpMethod.POST)) ///  http의 RequestBody와 MessageChannel의 Payload 값이 같을 경우에은 바로 넣어줄 수 있다.
+
+                    .get();
+        }
+
+        /**
+         * User Service에 제조 완료를 알려주기 위한 채널 생성
+         *
+         * @return
+         */
+        @Bean
+        public MessageChannel brewCompletedNotifyUserChannel() {
+            
+            return new DirectChannel();
+        }
+
+        /**
+         * User Service에 제조 완료를 알려주기 위한 흐름 설정
+         *
+         * @param environment
+         * @param brewCompletedNotifyUserChannel
+         * @return
+         */
+        @Bean
+        public IntegrationFlow notifyUserIntegrationFlow(Environment environment, MessageChannel brewCompletedNotifyUserChannel) {
+            var userUri = environment.getRequiredProperty("coffeehouse.user.notify-brew-complete-uri", URI.class);
+            return IntegrationFlow.from(brewCompletedNotifyUserChannel)
+                    .handle(Http.outboundChannelAdapter(userUri).httpMethod(HttpMethod.POST))
+                    .get();
+        }
     }
 }

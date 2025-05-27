@@ -31,6 +31,7 @@ public class BrewCompleteProcessor implements BrewComplete {
         // ----------------------------------------------------------
         var orderSheet = orderSheetRepository.findByOrderId(orderId).orElseThrow(OrderSheetNotFoundException::new);
         orderSheet.process();
+        /// channel을 이용한 발행을 하고 Adapter에서 해당 발행에 대한 처리를 한다.
         brewNotifier.notify(orderId);
     }
 }
