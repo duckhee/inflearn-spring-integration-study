@@ -1,6 +1,5 @@
 package kr.co.won.tests.integration;
 
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import kr.co.won.brew.EnableBrewModule;
 import kr.co.won.brew.domain.OrderSheetId;
 import kr.co.won.brew.domain.entity.OrderSheet;
@@ -17,8 +16,10 @@ import kr.co.won.user.domain.entity.UserAccount;
 import kr.co.won.user.domain.entity.UserAccountRepository;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.rabbit.connection.SimpleRoutingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.listener.MessageListenerContainer;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.SpringApplication;
@@ -26,6 +27,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.integration.amqp.dsl.Amqp;
+import org.springframework.integration.amqp.inbound.AmqpInboundChannelAdapter;
+import org.springframework.integration.amqp.outbound.AmqpOutboundEndpoint;
+import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.messaging.MessageChannel;
@@ -82,6 +86,13 @@ public class CoffeehouseIntegrationTestingApplication {
         return new Jackson2JsonMessageConverter();
     }
 
+    /**
+     * AMQP를 이용한 메시지 수신을 위한 흐름에 대해서 정의하는 Bean 등록
+     *
+     * @param connectionFactory
+     * @param brewRequestChannel
+     * @return
+     */
     @Bean
     public IntegrationFlow amqpInboundIntegrationFlow(ConnectionFactory connectionFactory, MessageChannel brewRequestChannel) {
         return IntegrationFlow.from(
@@ -105,14 +116,42 @@ public class CoffeehouseIntegrationTestingApplication {
      * @param barCounterChannel
      * @return
      */
+//    @Bean
+//    public IntegrationFlow amqpOutboundIntegrationFlow(AmqpTemplate amqpTemplate, MessageChannel barCounterChannel) {
+//        return IntegrationFlow.from(barCounterChannel)
+//                .handle(
+//                        Amqp.outboundAdapter(amqpTemplate) // 전달할 Adapter에 대한 설정
+//                                .routingKey("brew") // 어디로 보낼줄지에 대한 값 설정
+//                )
+//                .get();
+//    }
+
+    /**
+     * Annotation 방식을 이용해서 AMQP를 이용한 메시지 전송을 위한 흐름 정의
+     *
+     * @param amqpTemplate
+     * @return
+     */
     @Bean
-    public IntegrationFlow amqpOutboundIntegrationFlow(AmqpTemplate amqpTemplate, MessageChannel barCounterChannel) {
-        return IntegrationFlow.from(barCounterChannel)
-                .handle(
-                        Amqp.outboundAdapter(amqpTemplate) // 전달할 Adapter에 대한 설정
-                                .routingKey("brew") // 어디로 보낼줄지에 대한 값 설정
-                )
-                .get();
+    @ServiceActivator(inputChannel = "barCounterChannel")
+    public AmqpOutboundEndpoint amqpOutboundEndpoint(AmqpTemplate amqpTemplate) {
+        AmqpOutboundEndpoint amqpOutboundEndpoint = new AmqpOutboundEndpoint(amqpTemplate);
+        amqpOutboundEndpoint.setRoutingKey("brew");
+        return amqpOutboundEndpoint;
+    }
+
+    @Bean
+    public MessageListenerContainer amqpListenerContainer(ConnectionFactory connectionFactory) {
+        SimpleMessageListenerContainer simpleMessageListenerContainer = new SimpleMessageListenerContainer(connectionFactory);
+        simpleMessageListenerContainer.addQueueNames("brew"); // routingKey에 대한 Queue 생성
+        return simpleMessageListenerContainer;
+    }
+
+    @Bean
+    public AmqpInboundChannelAdapter amqpInboundChannelAdapter(MessageListenerContainer amqpListenerContainer, MessageChannel brewRequestChannel) {
+        AmqpInboundChannelAdapter amqpInboundChannelAdapter = new AmqpInboundChannelAdapter(amqpListenerContainer);
+        amqpInboundChannelAdapter.setOutputChannel(brewRequestChannel); /// amqp로 온 데이터를 brewRequestChannel에 전달을 해주기 위한 설정
+        return amqpInboundChannelAdapter;
     }
 
     /**
