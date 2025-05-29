@@ -7,11 +7,14 @@ import kr.co.won.brew.domain.service.BrewComplete;
 import kr.co.won.order.domain.entity.OrderRepository;
 import kr.co.won.order.domain.entity.OrderStatus;
 import kr.co.won.user.domain.service.UserNotifier;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,10 +46,19 @@ class BrewFulfillmentTests {
         // then
         var orderSheet = orderSheetRepository.findByOrderId(orderId).orElse(null);
         assertThat(orderSheet.getOrderSheetStatus()).isEqualTo(OrderSheetStatus.PROCESSED);
+//
+//        var order = orderRepository.findById(new kr.co.won.order.domain.OrderId("1a176aa8-e834-46e8-b293-0d0208ad1cd8")).orElse(null);
+//        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
+//
+//        verify(userNotifier, Mockito.times(1)).notify(any());
 
-        var order = orderRepository.findById(new kr.co.won.order.domain.OrderId("1a176aa8-e834-46e8-b293-0d0208ad1cd8")).orElse(null);
-        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
+        // 비동기 방식을 사용할 때 테스트를 위한 Awaitility
+        Awaitility.await().atMost(3, TimeUnit.SECONDS).untilAsserted(() -> {
 
-        verify(userNotifier, Mockito.times(1)).notify(any());
+            var order = orderRepository.findById(new kr.co.won.order.domain.OrderId("1a176aa8-e834-46e8-b293-0d0208ad1cd8")).orElse(null);
+            assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.COMPLETED);
+
+            verify(userNotifier, Mockito.times(1)).notify(any());
+        });
     }
 }

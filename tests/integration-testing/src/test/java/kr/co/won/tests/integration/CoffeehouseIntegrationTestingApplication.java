@@ -32,6 +32,7 @@ import org.springframework.integration.amqp.outbound.AmqpOutboundEndpoint;
 import org.springframework.integration.annotation.Router;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.channel.PublishSubscribeChannel;
 import org.springframework.integration.channel.QueueChannel;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.router.HeaderValueRouter;
@@ -77,6 +78,7 @@ public class CoffeehouseIntegrationTestingApplication {
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
         RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
         rabbitAdmin.declareQueue(new Queue("brew")); // routingKey에 대한 발행 값들을 담아주기 위한 Queue
+        rabbitAdmin.declareQueue(new Queue("brewComplete"));
         return rabbitAdmin;
     }
 
@@ -153,7 +155,7 @@ public class CoffeehouseIntegrationTestingApplication {
     @Bean
     public MessageListenerContainer amqpListenerContainer(ConnectionFactory connectionFactory) {
         SimpleMessageListenerContainer simpleMessageListenerContainer = new SimpleMessageListenerContainer(connectionFactory);
-        simpleMessageListenerContainer.addQueueNames("brew"); // routingKey에 대한 Queue 생성
+        simpleMessageListenerContainer.addQueueNames("brew", "brewComplete"); // routingKey에 대한 Queue 생성
         return simpleMessageListenerContainer;
     }
 
@@ -167,6 +169,7 @@ public class CoffeehouseIntegrationTestingApplication {
     public MessageRouter messageRouter() {
         HeaderValueRouter router = new HeaderValueRouter("amqp_receivedRoutingKey");
         router.setChannelMapping("brew", "brewRequestChannel");
+        router.setChannelMapping("brewComplete", "brewCompletedEventPublishSubscribeChannel");
         return router;
     }
 
@@ -221,4 +224,46 @@ public class CoffeehouseIntegrationTestingApplication {
     RestTemplate defaultRestTemplate(RestTemplateBuilder restTemplateBuilder) {
         return restTemplateBuilder.build();
     }
+
+    /**
+     * 제조 완료가 되었을 때 처리를 하기 위한 채널 등록
+     *
+     * @return
+     */
+    @Bean
+    public MessageChannel brewCompletedChannel() {
+        DirectChannel directChannel = new DirectChannel();
+        return directChannel;
+    }
+
+    /**
+     * brewCompletedChannel에 메시지가 전달이 되었을 때 Message Broker에게 전달을 할 때 설정
+     * => routingKey에 대한 값은 brewComplete로 설정이 된다.
+     *
+     * @param amqpTemplate
+     * @return
+     */
+    @Bean
+    @ServiceActivator(inputChannel = "brewCompletedChannel") // 해당 채널에 메시지가 전달이 되었을 때 처리를 하도록 하기 위한 설정
+    public AmqpOutboundEndpoint brewCompletedAmqpOutboundEndPoint(AmqpTemplate amqpTemplate) {
+        AmqpOutboundEndpoint amqpOutboundEndpoint = new AmqpOutboundEndpoint(amqpTemplate);
+        ///  brew completed에 대한 routingKey에 대한 정의
+        amqpOutboundEndpoint.setRoutingKey("brewComplete");
+        return amqpOutboundEndpoint;
+    }
+
+    /**
+     * 전달 받은 채널에 여러 소비자가 연결을 해서 사용하기 위한 Channel 등록
+     *
+     * @return
+     */
+    @Bean
+    public MessageChannel brewCompletedEventPublishSubscribeChannel() {
+        /// 여러 채널에서 사용을 하기 때문에 여러 채널이 구독할 수 있는 형태로 채널을 만들어줘야 한다.
+        PublishSubscribeChannel publishSubscribeChannel = new PublishSubscribeChannel();
+
+        return publishSubscribeChannel;
+    }
+
+
 }
