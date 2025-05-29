@@ -29,9 +29,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.integration.amqp.dsl.Amqp;
 import org.springframework.integration.amqp.inbound.AmqpInboundChannelAdapter;
 import org.springframework.integration.amqp.outbound.AmqpOutboundEndpoint;
+import org.springframework.integration.annotation.Router;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.channel.QueueChannel;
 import org.springframework.integration.dsl.IntegrationFlow;
+import org.springframework.integration.router.HeaderValueRouter;
+import org.springframework.integration.router.MessageRouter;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.web.client.RestTemplate;
 
@@ -140,6 +144,12 @@ public class CoffeehouseIntegrationTestingApplication {
         return amqpOutboundEndpoint;
     }
 
+    /**
+     * MessageListener를 할 Container에 대한 정의하는 Bean 등록
+     *
+     * @param connectionFactory
+     * @return
+     */
     @Bean
     public MessageListenerContainer amqpListenerContainer(ConnectionFactory connectionFactory) {
         SimpleMessageListenerContainer simpleMessageListenerContainer = new SimpleMessageListenerContainer(connectionFactory);
@@ -147,12 +157,53 @@ public class CoffeehouseIntegrationTestingApplication {
         return simpleMessageListenerContainer;
     }
 
+    /**
+     * Header에 있는 특정 값을 바탕으로 메시지 채널을 연결을 해주기 위한 Router에 대한 등록
+     *
+     * @return
+     */
     @Bean
-    public AmqpInboundChannelAdapter amqpInboundChannelAdapter(MessageListenerContainer amqpListenerContainer, MessageChannel brewRequestChannel) {
+    @Router(inputChannel = "amqpInboundChannel")
+    public MessageRouter messageRouter() {
+        HeaderValueRouter router = new HeaderValueRouter("amqp_receivedRoutingKey");
+        router.setChannelMapping("brew", "brewRequestChannel");
+        return router;
+    }
+
+    @Bean
+    public MessageChannel amqpInboundChannel() {
+        ///  amqp에서 온 메시지는 순서대로 관리가 되어야 하기 때문에 Queue를 이용해서 관리하기 위한 QueueChannel을 생성한다.
+        MessageChannel amqpInboundChannel = new QueueChannel();
+        return amqpInboundChannel;
+    }
+
+    /**
+     * 채널로 값이 전달이 되었을 때 해당 값을 전달할 채널에 대한 정의하는 Bean
+     *
+     * @param amqpListenerContainer
+     * @param amqpInboundChannel
+     * @return
+     */
+    @Bean
+    public AmqpInboundChannelAdapter amqpInboundChannelAdapter(MessageListenerContainer amqpListenerContainer, MessageChannel amqpInboundChannel) {
         AmqpInboundChannelAdapter amqpInboundChannelAdapter = new AmqpInboundChannelAdapter(amqpListenerContainer);
-        amqpInboundChannelAdapter.setOutputChannel(brewRequestChannel); /// amqp로 온 데이터를 brewRequestChannel에 전달을 해주기 위한 설정
+        amqpInboundChannelAdapter.setOutputChannel(amqpInboundChannel); /// amqp로 온 데이터를 routing을 해서 받기 위한 QueueChannel 등록
         return amqpInboundChannelAdapter;
     }
+//    /**
+//     * 채널로 값이 전달이 되었을 때 해당 값을 전달할 채널에 대한 정의하는 Bean
+//     *
+//     * @param amqpListenerContainer
+//     * @param brewRequestChannel
+//     * @return
+//     */
+//    @Bean
+//    public AmqpInboundChannelAdapter amqpInboundChannelAdapter(MessageListenerContainer amqpListenerContainer, MessageChannel brewRequestChannel) {
+//        AmqpInboundChannelAdapter amqpInboundChannelAdapter = new AmqpInboundChannelAdapter(amqpListenerContainer);
+//        amqpInboundChannelAdapter.setOutputChannel(brewRequestChannel); /// amqp로 온 데이터를 brewRequestChannel에 전달을 해주기 위한 설정
+//        return amqpInboundChannelAdapter;
+//    }
+
 
     /**
      * MessageChannel 등록
